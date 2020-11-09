@@ -4,19 +4,10 @@ import bs4
 import requests
 import json
 
-r = requests.get('https://kith.com/products.json')
-
-products = json.loads((r.text))['products']
-
-for product in products:
-    print(product['title'])
-    productName = product['title']
-
-
 class KithBot:
     def __init__(self, **info):
-        self.base_url = sys.argv[1] | "https://kith.com/"
-        self.shop_ext = "collections/mens-footwear"
+        self.base_url = "https://kith.com/"
+        self.shop_ext = "collections/"
         self.checkout_ext = "checkout/"
         self.info = info
 
@@ -25,76 +16,83 @@ class KithBot:
 
     def find_product(self):
         try:
-            r = requests.get("{}{}".format(
-                self.base_url, self.shop_ext)).text
-            print(r)
+            r = requests.get("{}{}{}".format(
+                self.base_url, self.shop_ext, self.info["category"])).text
             soup = bs4.BeautifulSoup(r, 'lxml')
             temp_tuple = []
             temp_link = []
-            print(soup)
 
-            for link in soup.find_all("h1", class_="product-card__title"):
-                temp_tuple.append((link.parent["href"], link.text))
+            for link in soup.find_all("a", class_="product-card__link"):
+                temp_tuple.append((link["href"], link.contents[1].text, link.contents[3].text))
 
             for i in temp_tuple:
-                if i[1] == self.info["product"] or i[1] == self.info["color"]:
+                if i[1] == self.info["product"] and i[2] == self.info["color"]:
                     temp_link.append(i[0])
 
             self.final_link = list(
-                set([x for x in temp_link if temp_link.count(x) == 2]))[0]
+                set([x for x in temp_link if temp_link.count(x) == 1]))[0]
             print(self.final_link)
         except requests.ConnectionError as e:
             print("Failed to open url")
 
     def visit_site(self):
+        size = '//div[@data-value='+ self.info["size"] + ']'
         self.b.visit("{}{}".format(self.base_url, str(self.final_link)))
-        self.b.find_option_by_text(self.info["size"]).click()
-        self.b.find_by_value('add to basket').click()
+        self.b.find_by_xpath(size).click()
+        self.b.find_by_name('add').click()
+        self.b.find_by_name('checkout').click()
+
+    def shipping_func(self):
+        self.b.fill("checkout[email]", self.info["emailfield"])
+
+        self.b.fill("checkout[shipping_address][first_name]", self.info["firstName"])
+        self.b.fill("checkout[shipping_address][last_name]", self.info["lastName"])
+        self.b.fill("checkout[shipping_address][address1]", self.info["addressfield"])
+
+        self.b.fill("checkout[shipping_address][city]", self.info["city"])
+        self.b.fill("checkout[shipping_address][zip]", self.info["zip"])
+        self.b.fill("checkout[shipping_address][phone]", self.info["phonefield"])
+
+        self.b.find_by_id('continue_button').click()
+
+        self.b.find_by_id('continue_button').click()
 
     def checkout_func(self):
-        self.b.visit("{}{}".format(self.base_url, self.checkout_ext))
-        self.b.fill("order[billing_name]", self.info["infofield"])
-        self.b.select("order[billing_country]", self.info["country"])
-        self.b.fill("order[email]", self.info["emailfield"])
-        self.b.fill("order[tel]", self.info["phonefield"])
+        self.b.fill("number", self.info["number"])
+        # self.b.fill("name", self.info["nameField"])
+        # self.b.fill("expiry", self.info["expiry"])
+        # self.b.fill("verification_value", self.info["ccv"])
 
-        self.b.fill("order[billing_address]", self.info["addressfield"])
-        self.b.fill("order[billing_city]", self.info["city"])
-        self.b.fill("order[billing_zip]", self.info["zip"])
-
-        self.b.select("credit_card[type]", self.info["card"])
-        self.b.fill("credit_card[cnb]", self.info["number"])
-        self.b.select("credit_card[month]", self.info["month"])
-        self.b.select("credit_card[year]", self.info["year"])
-        self.b.fill("credit_card[ovv]", self.info["ccv"])
-        self.b.find_by_css('.terms').click()
-        self.b.find_by_value("process payment").click()
+        self.b.find_by_id('continue_button').click()
 
     def main(self):
         self.init_browser()
         self.find_product()
         self.visit_site()
+        self.shipping_func()
         self.checkout_func()
-
 
 if __name__ == "__main__":
     INFO = {
         "driver": "geckodriver",
-        "product": "NIKE KILLSHOT SP DARK",
-        "color": "BEETROOT",
-        "size": "Medium",
-        "category": "tops_sweaters",
-        "namefield": "example",
+        "product": "Puma Suede",
+        "color": "Vintage Peacoat",
+        "size": "12",
+        "category": "mens-footwear",
+        "firstName": "John",
+        "lastName": "Smith",
+        "nameField": "John Smith",
         "emailfield": "example@example.com",
-        "phonefield": "XXXXXXXXXX",
+        "phonefield": "6780870522",
         "addressfield": "example road",
         "city": "example",
-        "zip": "72046",
+        "zip": "30106",
         "country": "GB",
         "card": "visa",
         "number": "1234123412341234",
         "month": "09",
         "year": "2020",
+        "expiry": "0920",
         "ccv": "123"
     }
     bot = KithBot(**INFO)
