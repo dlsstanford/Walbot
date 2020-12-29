@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 from splinter import Browser
+import textwrap
 import bs4
 import requests
 import json
@@ -58,12 +59,29 @@ class KithBot:
         self.b.find_by_id('continue_button').click()
 
     def checkout_func(self):
-        self.b.fill("number", self.info["number"])
-        # self.b.fill("name", self.info["nameField"])
-        # self.b.fill("expiry", self.info["expiry"])
-        # self.b.fill("verification_value", self.info["ccv"])
+        id0 = self.b.find_by_xpath("//iframe[@class='card-fields-iframe']")[0]['id']
+        with self.b.get_iframe(id0) as iframe:
+            num = textwrap.wrap(self.info["number"], 4)
+            iframe.find_by_name("number").type(num[0])
+            iframe.find_by_name("number").type(num[1])
+            iframe.find_by_name("number").type(num[2])
+            iframe.find_by_name("number").type(num[3])
 
-        self.b.find_by_id('continue_button').click()
+        id1 = self.b.find_by_xpath("//iframe[@class='card-fields-iframe']")[1]['id']
+        with self.b.get_iframe(id1):
+            self.b.fill("name", self.info["nameField"])
+
+        id2 = self.b.find_by_xpath("//iframe[@class='card-fields-iframe']")[2]['id']
+        with self.b.get_iframe(id2) as iframe:
+            num = textwrap.wrap(self.info["expiry"], 2)
+            iframe.find_by_name("expiry").type(num[0])
+            iframe.find_by_name("expiry").type(num[1])
+
+        id3 = self.b.find_by_xpath("//iframe[@class='card-fields-iframe']")[3]['id']
+        with self.b.get_iframe(id3):
+            self.b.fill("verification_value", self.info["ccv"])
+
+        # self.b.find_by_id('continue_button').click()
 
     def main(self):
         self.init_browser()
@@ -75,8 +93,8 @@ class KithBot:
 if __name__ == "__main__":
     INFO = {
         "driver": "geckodriver",
-        "product": "Puma Suede",
-        "color": "Vintage Peacoat",
+        "product": "Clarks Desert Boot",
+        "color": "Chocolate",
         "size": "12",
         "category": "mens-footwear",
         "firstName": "John",
